@@ -8,13 +8,20 @@ raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/
 
 
 ## Step 1
-Download `Informix Developer Edition for Linux ARM v7 32 (Raspberry PI) `. Must be
+Download `Informix Developer Edition for Linux ARM v7 32 (Raspberry PI)`. Must be
 that version and must be ARM enabled.
 You can use [this](https://www.ibm.com/products/informix/editions) link.
 
-```
-  scp examplefile yourusername@yourserver:/tmp
+## Step 2
+ - Copy the tar file for installation to your `raspberry` temporary folder.
 
+  `
+  scp examplefile yourusername@yourserver:/tmp
+  `
+I.e. in my case:
+
+```
+scp ids.12.10.UC9DE.Linux-ARM7.tar pi@yipAdress:/tmp
 ```
   
 
