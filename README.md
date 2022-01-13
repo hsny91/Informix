@@ -63,3 +63,39 @@ informix ALL=(ALL) NOPASSWD: ALL
 ```
 sudo ./ids_install
 ```
+- Follow the UI and enter the following:
+
+     + accept -> 1 RET
+
+     + RET
+
+     + specify directory where to install the products:
+       `/opt/IBM/informix1210UC9DE`
+
+     + accept -> 1 (wait a long bit and do not interrupt)
+
+- Optional: As soon as the installation has successfully finished,
+  you can delete the ifxinstall folder and the Informix install tar
+  file if you want.
+
+```
+rm -rf /tmp/ifxinstall
+rm /tmp/ds.12.10.UC9DE.Linux-ARM7.tar 
+```
+- Optional, but highly recommended: create the following symbolic link:
+
+```
+sudo ln -s /opt/IBM/informix1210UC4DE /opt/IBM/informix
+```
+- Create the folder which will later contain the Informix database files:
+
+```
+sudo mkdir /opt/IBM/ifxdata
+```
+- Set its ownership and permissions:
+
+```
+sudo chown informix:informix /opt/IBM/ifxdata
+sudo chmod 770 /opt/IBM/ifxdata
+```
+   
