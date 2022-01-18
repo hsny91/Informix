@@ -4,6 +4,7 @@ raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/
 
 ## Overview 
 - [download informix](#Step-1)
+- [Configuration and Initialization of a New Informix Instance](#Step-3-Configuration-and-Initialization-of-a-New-Informix-Instance)
 
 
 
@@ -85,7 +86,7 @@ rm /tmp/ds.12.10.UC9DE.Linux-ARM7.tar
 - Optional, but highly recommended: create the following symbolic link:
 
 ```
-sudo ln -s /opt/IBM/informix1210UC4DE /opt/IBM/informix
+sudo ln -s /opt/IBM/informix1210UC9DE /opt/IBM/informix
 ```
 - Create the folder which will later contain the Informix database files:
 
@@ -98,4 +99,95 @@ sudo mkdir /opt/IBM/ifxdata
 sudo chown informix:informix /opt/IBM/ifxdata
 sudo chmod 770 /opt/IBM/ifxdata
 ```
-   
+## Step 3 Configuration and Initialization of a New Informix Instance
+
+- Login as the informix user
+```
+- su informix 
+    
+```
+- And enter your password of (Ref:1).
+Set the $INFORMIXDIR environment variable to point to the Informix install directory (actually to the symbolic link):
+
+```
+- export INFORMIXDIR=/opt/IBM/informix
+    
+```
+- Extend the $PATH environment variable:
+
+```
+- export PATH=$PATH:$INFORMIXDIR/bin
+    
+```
+- Set the $INFORMIXSERVER environment variable (you can choose any name here, but let’s use ol_informix1210 for now to keep it simple):
+
+```
+- export INFORMIXSERVER=ol_informix1210
+    
+```
+- Create a new Informix configuration file:
+
+```
+- cp $INFORMIXDIR/etc/onconfig.std $INFORMIXDIR/etc/onconfig
+    
+```
+- Create a new Informix hosts definition file:
+
+```
+- cp $INFORMIXDIR/etc/sqlhosts.demo $INFORMIXDIR/etc/sqlhosts
+    
+```
+- Edit the file $INFORMIXDIR/etc/onconfig (with nano, vi or any other editor)
+I.e. enter the file via the nano editor (or any other editor)
+
+```
+- nano $INFORMIXDIR/etc/onconfig
+
+```
+- And apply the following changes (use the search option ^W (control-W)):
+
+```
+- ROOTPATH /opt/IBM/ifxdata/rootdbs
+  DBSERVERNAME	ol_informix1210
+  LTAPEDEV	/dev/null
+  TAPEDEV		/dev/null
+  LOGFILES	10
+
+```
+Save the file and exit the editor (Control-O RET; Control-X).
+
+- Edit the file $INFORMIXDIR/etc/sqlhosts
+
+```
+- nano $INFORMIXDIR/etc/sqlhosts
+    
+```
+
+- And add the following line:
+
+```
+- ol_informix1210	onsoctcp	localhost	9088
+    
+```
+Note: 9088 is the port which will be used by Informix for the client/server communication. You can choose any available port you want. Save the file and exit the editor. 
+
+- Create an empty database file and set the correct access mode:
+
+```
+- touch /opt/IBM/ifxdata/rootdbs
+  chmod 660 /opt/IBM/ifxdata/rootdbs
+
+```
+- Now we are ready to initialize Informix for the first time:
+
+```
+- oninit -iv
+    
+```
+- The first initialization will take a few minutes and it will create a few system databases automatically. You can monitor the pogress by doing the following:
+
+```
+- tail -f /opt/IBM/informix/tmp/online.log
+    
+```
+Please wait until you see the following entry in the `online.log` file before you continue:
