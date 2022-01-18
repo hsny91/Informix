@@ -150,7 +150,7 @@ I.e. enter the file via the nano editor (or any other editor)
 - ROOTPATH /opt/IBM/ifxdata/rootdbs
   DBSERVERNAME	ol_informix1210
   LTAPEDEV	/dev/null
-  TAPEDEV		/dev/null
+  TAPEDEV	  /dev/null
   LOGFILES	10
 
 ```
