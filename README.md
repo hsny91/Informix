@@ -732,8 +732,92 @@ WHERE sensor_id = "Sensor04"
 
 ## Read out The Internal Temperature of an Raspberry Pi
 
+- Now we are going to use the Informix database to automatically read out the Raspberry Pi's internal temperature every 60 seconds and store it in the 'sensor_data' table.
+- The RPi's internal temperature can be accessed through the following file: `/sys/class/thermal/thermal_zone0/temp`
 
+- To access that value from within Informix we are going to create a so called EXTERNAL TABLE. EXTERNAL TABLES allow easy access from and to external files and hence are great e.g. for loading and/or exporting data. Let's create an EXTERNAL TABLE called 'rpi_temp':
 
+```
+create external table rpi_temp
+(
+        temp1 integer external char(6)
+)
+using
+(
+        FORMAT "FIXED",
+        DATAFILES
+        (
+                "DISK:/sys/class/thermal/thermal_zone0/temp"
+        )
+);
+
+```
+- So each time we do e.g. a 'SELECT temp1/1000 from rpi_temp' we will get the current RPi temperature in centigrade
+
+```
+echo "select temp1/1000 from rpi_temp" | dbaccess sensor_db -
+```
+
+- We expect the following results:
+
+> Database selected
+>
+>    (expression)
+>
+>     48.6920000000000
+>
+> 1 row(s) retrieved.
+
+- Now we need to find a way to read out that table every 60 seconds and store it in the sensor_data table. 
+
+```
+insert into sensor_data
+        select "SensorRPiTemp", "Temperature", "C",  current::datetime year to minute,
+                (temp1/1000)::DECIMAL(15,2) from rpi_temp;
+
+```
+
+- Now create a new task by inserting a new row into the 'sysadmin:ph_task' table as user 'informix':
+  Note: Here you have to switch to database sysadmin@ol_informix1210 .
+
+```
+iINSERT INTO ph_task
+(
+        tk_name,
+        tk_description,
+        tk_type,
+        tk_group,
+        tk_execute,
+        tk_start_time,
+        tk_stop_time,
+        tk_frequency,
+        tk_dbs
+)
+VALUES
+(
+        "Read Out RPi Temp",
+        "Reads out the RPi internal temp every 60 secs",
+        "TASK",
+        "MISC",
+        "insert into sensor_db:sensor_data select 'SensorRPiTemp', 'Temperature', 'C', current::datetime year to minute, (temp1/1000)::DECIMAL(15,2) from sensor_db:rpi_temp",
+        NULL,
+        NULL,
+        interval(1) minute to minute,
+        "sensor_db"
+)
+```
+- Since the Informix scheduler is caching the content of the 'ph_task' table, you should stop and re-start the scheduler with the following SQL statements as user 'informix’:
+
+```
+echo "EXECUTE FUNCTION task('scheduler shutdown')" | dbaccess sysadmin -
+echo "EXECUTE FUNCTION task('scheduler start')" | dbaccess sysadmin -
+```
+
+- With the following SELECT statement you can read out the last five entries (temperature entries) from the 'sensor_data' table in descending order: 
+
+```
+echo "select first 5 * from sensor_data where sensor_id = 'SensorRPiTemp' order by timestamp desc" | dbaccess sensor_db -
+```
 
 Congratulations! :clap:
 
