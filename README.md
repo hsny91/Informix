@@ -616,6 +616,7 @@ select sensor_id, sensor_type, sensor_unit, timestamp, values::json values from 
 > sensor_unit  C
 >
 > timestamp    2015-01-26 08:01:00.00000
+>
 > values       {"temp1":23.100000}
 >
 > sensor_id    Sensor03
