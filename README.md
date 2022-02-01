@@ -353,6 +353,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 >
 > value        21.50
 >
+>
 > sensor_id    Sensor01
 >
 > sensor_type  Temp
@@ -360,7 +361,9 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > sensor_unit  C
 >
 > timestamp    2015-01-26 08:01:00.00000
+> 
 > value        21.60
+>
 >
 > sensor_id    Sensor01
 > 
@@ -372,6 +375,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > 
 > value        22.10
 >
+>
 > sensor_id    Sensor02
 >
 > sensor_type  Temp
@@ -381,6 +385,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 15:45:00.00000
 > 
 > value        35.90
+>
 >
 > sensor_id    Sensor02
 >
@@ -401,6 +406,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 15:47:00.00000
 >
 >value        33.50
+>
 >
 > 6 row(s) retrieved.
 
