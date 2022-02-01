@@ -269,3 +269,196 @@ dbaccess
 - Click `Select`. Then choose `sensor-db@ol_informix1210`
 
 - Now we need to describe/define the actual payload for the timeseries column in our sensor data table. 
+
+```
+create row type sensor_t
+(
+        timestamp       datetime year to fraction(5),
+        value           decimal(15,2)
+);
+
+```
+- In the next step we need to create a 'container' which will store the actual time series data.
+
+```
+execute procedure TSContainerCreate (
+        'sensor_cont',
+        'rootdbs',
+        'sensor_t',
+        2048,
+        2048);
+
+```
+- In the following step we then create the actual time series base table with the TIMESERIES column 'sensor_values', referencing the time series type 'sensor_t':
+
+```
+create table sensor_ts (
+        sensor_id char(40),
+        sensor_type char(20),
+        sensor_unit char(6),
+        sensor_values timeseries(sensor_t),
+        primary key (sensor_id)
+) lock mode row;
+
+```
+- We are creating a VTI table with the name 'sensor_data' (like the relational table in the beginning of my post) based on the time series base table 'sensor_ts'.
+
+```
+execute procedure TSCreateVirtualTab (
+        'sensor_data',
+        'sensor_ts',
+        'origin(2015-01-26 00:00:00.00000),calendar(ts_1min),container(sensor_cont),threshold(0),regular',0,'sensor_values');
+
+```
+
+- After executing that stored procedure, you will have a virtual table called 'sensor_data' with the following schema:
+
+```
+create table sensor_data
+  (
+    sensor_id char(40) not null ,
+    sensor_type char(20),
+    sensor_unit char(6),
+    timestamp datetime year to fraction(5),
+    value decimal(15,2)
+  );
+
+```
+- Now we test the 'sensor_data' table by inserting the following 6 demo records.
+
+```
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 08:00"::datetime year to minute, 21.5);
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 08:01"::datetime year to minute, 21.6);
+insert into sensor_data values ("Sensor02", "Temp", "C", "2015-01-26 15:45"::datetime year to minute, 35.9);
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 08:02"::datetime year to minute, 22.1);
+insert into sensor_data values ("Sensor02", "Temp", "C", "2015-01-26 15:46"::datetime year to minute, 35.2);
+insert into sensor_data values ("Sensor02", "Temp", "C", "2015-01-26 15:47"::datetime year to minute, 33.5);
+
+```
+
+-  Do a 'SELECT *' on the sensor_data table first:
+```
+echo "select * from sensor_data" | dbaccess sensor_db -
+
+```
+-  As a result of the search, we expect the following results
+
+> sensor_id    Sensor01 
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+>
+> timestamp    2015-01-26 08:00:00.00000
+>
+> value        21.50
+>
+> sensor_id    Sensor01
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+>
+> timestamp    2015-01-26 08:01:00.00000
+> value        21.60
+>
+> sensor_id    Sensor01
+> 
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 08:02:00.00000
+> 
+> value        22.10
+>
+> sensor_id    Sensor02
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 15:45:00.00000
+> 
+> value        35.90
+>
+> sensor_id    Sensor02
+>
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 15:46:00.00000
+> 
+> value        35.20
+>
+> sensor_id    Sensor02
+> 
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 15:47:00.00000
+>
+>value        33.50
+>
+> 6 row(s) retrieved.
+
+Database closed.
+
+
+- Now let's try to run the following SQL query against the time series base table: 
+
+```
+echo "SELECT sensor_id, sensor_type, sensor_unit FROM sensor_ts" | dbaccess sensor_db -
+
+```
+
+-  As a result of the search, we expect the following results
+
+
+> Database selected.
+>
+> sensor_id                                sensor_type          sensor_unit
+>
+> Sensor01                                 Temp                 C
+> Sensor02                                 Temp                 C
+>
+> 2 row(s) retrieved.
+
+- Before we finish that first and very basic part on how to use the Informix time series data type, We look at glimpse on what you can do with the stored data. Before I do that let's add a few additional example rows through our 'sensor_data' VTI table:
+
+```
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 07:58"::datetime year to minute, 20.2);
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 07:59"::datetime year to minute, 20.7);
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-27 10:11"::datetime year to minute, 26.3);
+insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-27 10:45"::datetime year to minute, 26.9);
+
+```
+- In the following SQL example we are aggregating the minute interval based data for 'sensor_id' 'Sensor01' to an hourly granularity:
+
+```
+SELECT AggregateBy(
+        'SUM($value)',
+        'ts_1hour',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)
+FROM sensor_ts
+WHERE sensor_id = "Sensor01";
+
+```
+- The 'AggregateBy()' function is returning a TIMESERIES object with the aggregated values based on the supplied 'ts_1hour' calendar for the date/time range from/to provided. The result looks like this:
+
+> (expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1hour), container(sensor_cont), threshold(0), regular, [NULL, NULL, 
+>
+> NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+>
+> NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, (53.20)]
+>
+> 1 row(s) retrieved.
+
+
+
+Happy Coding! :joy:
