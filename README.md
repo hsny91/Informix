@@ -778,7 +778,7 @@ insert into sensor_data
 
 ```
 
-- Now create a new task by inserting a new row into the 'sysadmin:ph_task' table as user 'informix':
+- Now create a new task by inserting a new row into the 'sysadmin:ph_task' table as user 'informix':<br/>
   Note: Here you have to switch to database sysadmin@ol_informix1210 .
 
 ```
