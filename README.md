@@ -352,8 +352,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 08:00:00.00000
 >
 > value        21.50
->
->
+><br/><br/>
 > sensor_id    Sensor01
 >
 > sensor_type  Temp
@@ -363,8 +362,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 08:01:00.00000
 > 
 > value        21.60
->
->
+><br/><br/>
 > sensor_id    Sensor01
 > 
 > sensor_type  Temp
@@ -374,8 +372,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 08:02:00.00000
 > 
 > value        22.10
->
->
+><br/><br/>
 > sensor_id    Sensor02
 >
 > sensor_type  Temp
@@ -385,8 +382,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 15:45:00.00000
 > 
 > value        35.90
->
->
+><br/><br/>
 > sensor_id    Sensor02
 >
 > sensor_type  Temp
@@ -396,7 +392,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 15:46:00.00000
 > 
 > value        35.20
->
+><br/><br/>
 > sensor_id    Sensor02
 > 
 > sensor_type  Temp
@@ -406,8 +402,7 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 > timestamp    2015-01-26 15:47:00.00000
 >
 >value        33.50
->
->
+><br/><br/>
 > 6 row(s) retrieved.
 
 Database closed.
@@ -457,14 +452,62 @@ WHERE sensor_id = "Sensor01";
 ```
 - The 'AggregateBy()' function is returning a TIMESERIES object with the aggregated values based on the supplied 'ts_1hour' calendar for the date/time range from/to provided. The result looks like this:
 
-> (expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1hour), container(sensor_cont), threshold(0), regular, [NULL, NULL, 
+> (expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1hour), container(sensor_cont), threshold(0), 
 >
-> NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+>regular, [NULL, NULL, NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL, NULL, 
 >
-> NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, (53.20)]
+> NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, (53.20)]
 >
 > 1 row(s) retrieved.
 
+- In the following SQL example we are aggregating the minute interval based data for 'sensor_id' 'Sensor01' to an daily granularity:
+
+```
+SELECT AggregateBy(
+        'SUM($value)',
+        'ts_1day',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)
+FROM sensor_ts
+WHERE sensor_id = "Sensor01";
+
+```
+- We expect the following results:
+>(expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1day), container(sensor_cont), threshold(0), regular, [(106.10), (53.20)]
+>
+>1 row(s) retrieved.
+
+- Since your application probably doesn't know how to handle an Informix time series object directly, let's convert those objects on the fly into a tabular format for a more classic relational processing. We are using a combination of the 'Transpose()' function and the 'Table()' constructor to create the derived table 'sensor':
+
+```
+SELECT sensor.timestamp::datetime year to hour, sensor.value FROM TABLE (
+TRANSPOSE ((
+SELECT AggregateBy(
+        'SUM($value)',
+        'ts_1hour',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)
+FROM sensor_ts
+WHERE sensor_id = "Sensor01"
+))::sensor_t
+) AS TAB (sensor);
+
+```
+- We expect the following results:
+
+> timestamp                value
+> <br/><br/>
+> 2015-01-26 07            40.90
+> 
+> 2015-01-26 08            65.20
+> 
+> 2015-01-27 10            53.20
+>
+> 3 row(s) retrieved.
 
 
 Happy Coding! :joy:
