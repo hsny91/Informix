@@ -404,8 +404,8 @@ echo "select * from sensor_data" | dbaccess sensor_db -
 >value        33.50
 ><br/><br/>
 > 6 row(s) retrieved.
-
-Database closed.
+>
+> Database closed.
 
 
 - Now let's try to run the following SQL query against the time series base table: 
@@ -434,7 +434,6 @@ insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 07:58"::dat
 insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-26 07:59"::datetime year to minute, 20.7);
 insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-27 10:11"::datetime year to minute, 26.3);
 insert into sensor_data values ("Sensor01", "Temp", "C", "2015-01-27 10:45"::datetime year to minute, 26.9);
-
 ```
 - In the following SQL example we are aggregating the minute interval based data for 'sensor_id' 'Sensor01' to an hourly granularity:
 
@@ -454,9 +453,10 @@ WHERE sensor_id = "Sensor01";
 
 > (expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1hour), container(sensor_cont), threshold(0), 
 >
->regular, [NULL, NULL, NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL, NULL, 
+>regular, [NULL, NULL, NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL,
+> NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 >
-> NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, (53.20)]
+> NULL, NULL, NULL, (53.20)]
 >
 > 1 row(s) retrieved.
 
