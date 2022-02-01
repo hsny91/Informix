@@ -420,10 +420,11 @@ echo "SELECT sensor_id, sensor_type, sensor_unit FROM sensor_ts" | dbaccess sens
 
 > Database selected.
 >
-> sensor_id                                sensor_type          sensor_unit
+> sensor_id&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensor_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sensor_unit
 >
-> Sensor01                                 Temp                 C
-> Sensor02                                 Temp                 C
+> Sensor01&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Temp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C
+>
+> Sensor02&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Temp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C
 >
 > 2 row(s) retrieved.
 
@@ -454,9 +455,8 @@ WHERE sensor_id = "Sensor01";
 > (expression)  origin(2015-01-26 00:00:00.00000), calendar(ts_1hour), container(sensor_cont), threshold(0), 
 >
 >regular, [NULL, NULL, NULL, NULL, NULL, NULL, NULL, (40.90), (65.20), NULL, NULL, NULL, NULL, NULL,
-> NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
->
-> NULL, NULL, NULL, (53.20)]
+> NULL,NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+> NULL, NULL, NULL, NULL, (53.20)]
 >
 > 1 row(s) retrieved.
 
@@ -499,15 +499,241 @@ WHERE sensor_id = "Sensor01"
 ```
 - We expect the following results:
 
-> timestamp                value
+> timestamp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;value
 > <br/><br/>
-> 2015-01-26 07            40.90
+> 2015-01-26&nbsp;&nbsp;&nbsp;07&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;40.90
 > 
-> 2015-01-26 08            65.20
+> 2015-01-26&nbsp;&nbsp;&nbsp;08&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;65.20
 > 
-> 2015-01-27 10            53.20
+> 2015-01-27&nbsp;&nbsp;&nbsp;10&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;53.20
 >
 > 3 row(s) retrieved.
 
+- Now we  adjust the format of the timestamp column to an daily format. Finally re-run the daily aggregation in a similar way:
+
+```
+SELECT sensor.timestamp::datetime year to day timestamp, sensor.value FROM TABLE (
+TRANSPOSE ((
+SELECT AggregateBy(
+        'SUM($value)',
+        'ts_1day',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)
+FROM sensor_ts
+WHERE sensor_id = "Sensor01"
+))::sensor_t
+) AS TAB (sensor);
+
+```
+- We expect the following results:
+
+> timestamp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;value
+> <br/><br/>
+> 2015-01-26&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;106.10
+> 
+> 2015-01-27&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;53.20
+>
+> 2 row(s) retrieved.
+
+# Increase your application's flexibility with a JSON based sensor data table!
+- Now that you have learned the basics on how to create an Informix sensor data table based on structured data types so far, let's have a brief look on how to create a JSON based sensor data table.
+
+- Now we need to describe/define the actual payload for the timeseries column in our sensor data table:
+
+```
+create row type sensor_json_t
+(
+        timestamp       datetime year to fraction(5),
+        values           bson
+);
+```
+
+- In the following SQL script we are creating a new time series container for the JSON time series, a new base table with the TIMESERIES column and a new VTI table to easily access the JSON based sensor data:
+
+```
+execute procedure TSContainerCreate (
+        'sensor_json_cont',
+        'rootdbs',
+        'sensor_json_t',
+        2048,
+        2048);
+```
+
+```
+create table sensor_json_ts (
+        sensor_id char(40),
+        sensor_type char(20),
+        sensor_unit char(6),
+        sensor_values timeseries(sensor_json_t),
+        primary key (sensor_id)
+) lock mode row;
+
+```
+
+```
+execute procedure TSCreateVirtualTab (
+        'sensor_json_data',
+        'sensor_json_ts',
+        'origin(2015-01-26 00:00:00.00000),calendar(ts_1min),container(sensor_json_cont),threshold(0),regular',0,'sensor_values');
+
+```
+- As soon as you have the VTI table 'sensor_json_data' created, you can start to insert new rows with JSON formatted sensor data. Notice that 'Sensor03' and 'Sensor04' have different number of measurement values ('temp1' and 'temp' respectively):
+
+```
+insert into sensor_json_data values ("Sensor03", "Temp", "C", "2015-01-26 08:00"::datetime year to minute, '{ "temp1":21.5 }'::json);
+insert into sensor_json_data values ("Sensor03", "Temp", "C", "2015-01-26 08:01"::datetime year to minute, '{ "temp1":23.1 }'::json);
+insert into sensor_json_data values ("Sensor03", "Temp", "C", "2015-01-27 10:45"::datetime year to minute, '{ "temp1":22.8 }'::json);
+insert into sensor_json_data values ("Sensor04", "Temp", "C", "2015-01-26 12:02"::datetime year to minute, '{ "temp1":30.2, "temp2":10.3}'::json);
+insert into sensor_json_data values ("Sensor04", "Temp", "C", "2015-01-27 15:46"::datetime year to minute, '{ "temp1":34.0, "temp2":9.7}'::json);
+insert into sensor_json_data values ("Sensor04", "Temp", "C", "2015-01-27 15:47"::datetime year to minute, '{ "temp1":33.9, "temp2":9.2}'::json);
+
+```
+- Now let's select the data which we just inserted:
+
+```
+select sensor_id, sensor_type, sensor_unit, timestamp, values::json values from sensor_json_data;
+
+```
+
+- We expect the following results:
+
+> sensor_id    Sensor03
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 08:00:00.00000
+>
+> values       {"temp1":21.500000}
+><br/><br/>
+> sensor_id    Sensor03
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+>
+> timestamp    2015-01-26 08:01:00.00000
+> values       {"temp1":23.100000}
+>
+> sensor_id    Sensor03
+>
+> sensor_type  Temp
+>
+> sensor_unit  C
+>
+> timestamp    2015-01-27 10:45:00.00000
+>
+> values       {"temp1":22.800000}
+><br/><br/>
+> sensor_id    Sensor04
+> 
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-26 12:02:00.00000
+> 
+> values       {"temp1":30.200000,"temp2":10.300000}
+><br/><br/>
+> sensor_id    Sensor04
+> 
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-27 15:46:00.00000
+> 
+> values       {"temp1":34.000000,"temp2":9.700000}
+><br/><br/>
+> sensor_id    Sensor04
+>
+> sensor_type  Temp
+> 
+> sensor_unit  C
+> 
+> timestamp    2015-01-27 15:47:00.00000
+> 
+> values       {"temp1":33.900000,"temp2":9.200000}
+><br/><br/>
+>6 row(s) retrieved.
+
+- We are now using JSON documents to store the sensor data, we can  use the same time series functions to do the aggregations:
+
+```
+SELECT sensor.timestamp::datetime year to hour timestamp, sensor.value temp1 FROM TABLE (
+TRANSPOSE ((
+SELECT AggregateBy(
+        'SUM($temp1)',
+        'ts_1hour',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)::TimeSeries(sensor_t)
+FROM sensor_json_ts
+WHERE sensor_id = "Sensor03"
+))
+) AS TAB (sensor);
+
+```
+
+- We expect the following results:
+
+> timestamp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;value
+> <br/><br/>
+> 2015-01-26&nbsp;&nbsp;&nbsp;08&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;44.60
+> 
+> 2015-01-27&nbsp;&nbsp;&nbsp;10&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;22.80
+>
+> 2 row(s) retrieved.
+
+- If you would like to do an aggregation on two JSON fields, you need to a create a new row type with two numeric elements, e.g. value1 and value2:
+
+```
+create row type sensor_twovals_t
+(
+        timestamp       datetime year to fraction(5),
+        value1           decimal(15,2),
+        value2           decimal(15,2)
+);
+
+```
+- The associated query looks like:
+
+```
+SELECT sensor.timestamp::datetime year to hour timestamp,
+        sensor.value1 temp1,  sensor.value2 temp2 FROM TABLE (
+TRANSPOSE ((
+SELECT AggregateBy(
+        'SUM($temp1),SUM($temp2)',
+        'ts_1hour',
+        sensor_values,
+        0,
+        '2015-01-26 00:00'::datetime year to minute,
+        '2015-01-31 23:59'::datetime year to minute)::TimeSeries(sensor_twovals_t)
+FROM sensor_json_ts
+WHERE sensor_id = "Sensor04"
+))
+) AS TAB (sensor);
+
+```
+- We expect the following results:
+
+> timestamp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp2
+> <br/><br/>
+> 2015-01-26&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;30.20&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;10.30
+> 
+> 2015-01-27&nbsp;&nbsp;&nbsp;15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;67.90&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;18.90
+>
+> 2 row(s) retrieved.
+
+
+
+
+
+
 
 Happy Coding! :joy:
+
