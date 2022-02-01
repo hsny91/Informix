@@ -6,6 +6,7 @@ raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/
 - [download informix](#Installation-of-Informix)
 - [Configuration and Initialization of a New Informix Instance](#Configuration-and-Initialization-of-a-New-Informix-Instance)
 - [Create an Informix demo database](#Create-an-Informix-Demo-Database)
+- [How to Create a Sensor Database with IBM Informix](#How-to-Create-a-Sensor-Database-with-IBM-Informix)
 
 
 
@@ -14,7 +15,8 @@ raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/
 that version and must be ARM enabled.
 You can use [this](https://www.ibm.com/products/informix/editions) link.
 
-- Copy the tar file for installation to your `raspberry` temporary folder: **scp examplefile yourusername@yourserver:/tmp** I.e. in my case:
+- Copy the tar file for installation to your `raspberry` temporary folder: 
+> **scp examplefile yourusername@yourserver:/tmp** I.e. in my case:
 
 ```
 scp ids.12.10.UC9DE.Linux-ARM7.tar pi@yipAdress:/tmp
@@ -105,7 +107,7 @@ sudo chmod 770 /opt/IBM/ifxdata
 Set the $INFORMIXDIR environment variable to point to the Informix install directory (actually to the symbolic link):
 
 ```
-- export INFORMIXDIR=/opt/IBM/informix
+  export INFORMIXDIR=/opt/IBM/informix
     
 ```
 - Extend the $PATH environment variable:
@@ -185,8 +187,85 @@ Note: 9088 is the port which will be used by Informix for the client/server comm
   tail -f /opt/IBM/informix/tmp/online.log
     
 ```
-Please wait until you see the following entry in the `online.log` file before you continue: **‘sysadmin’ database built successfully**
+Please wait until you see the following entry in the `online.log` file before you continue: 
+>**‘sysadmin’ database built successfully**
 
 
 ## Create an Informix Demo Database
 
+**As user informix:**
+- Execute the following command to create the 'stores_demo' database:
+
+```
+ dbaccessdemo -log
+    
+```
+>Depending on what kind of storage you might be using for your RPi that command might take a few minutes to complete.
+
+**As user informix:**
+- To stop an Informix instance:
+
+```
+ onmode -ky
+    
+```
+- To start an Informix instance:
+
+```
+ oninit
+    
+```
+- To check the status of Informix:
+```
+ onstat -
+    
+```
+- Display the last message log entries:
+
+```
+onstat -m
+    
+```
+- Display some basic performance stats:
+
+```
+onstat -p
+    
+```
+**As any user who has the Informix environment variables (see above) set:**
+
+ - Execute SQL scripts from the command line:
+
+```
+dbaccess <database_name> <sql_script_file>
+    
+```
+- Using dbaccess interactively:
+
+```
+dbaccess <database_name>
+    
+```
+- or simply
+
+```
+dbaccess 
+    
+```
+
+## How to Create a Sensor Database with IBM Informix
+In this example we will create a sensor database with with a sensor data table to hold the data for sensors which are producing measurements in 1-minute intervals. So we will be dealing with regular time series.
+
+- In the very first step let's create an empty Informix database
+```
+echo "create database sensor_db with log" | dbaccess - -
+
+```
+- Access database
+```
+dbaccess
+
+```
+- Click `Select`. Then choose `sensor-db@ol_informix1210`
+
+- Now we need to describe/define the actual payload for the timeseries column in our sensor data table. 
