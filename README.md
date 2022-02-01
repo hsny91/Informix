@@ -3,7 +3,7 @@ This is an easy install guide of the informix database on
 raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/viewtopic.php?f=37&t=97199)
 
 ## Overview 
-- [download informix](#Installation-of-Informix)
+- [Download informix](#Installation-of-Informix)
 - [Configuration and Initialization of a New Informix Instance](#Configuration-and-Initialization-of-a-New-Informix-Instance)
 - [Create an Informix demo database](#Create-an-Informix-Demo-Database)
 - [How to Create a Sensor Database with IBM Informix](#How-to-Create-a-Sensor-Database-with-IBM-Informix)
