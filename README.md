@@ -7,7 +7,7 @@ raspberry-pi. It is mostly a 1:1 from [here](https://www.raspberrypi.org/forums/
 - [Configuration and Initialization of a New Informix Instance](#Configuration-and-Initialization-of-a-New-Informix-Instance)
 - [Create an Informix demo database](#Create-an-Informix-Demo-Database)
 - [How to Create a Sensor Database with IBM Informix](#How-to-Create-a-Sensor-Database-with-IBM-Informix)
-
+- [Read out The Internal Temperature of an Raspberry Pi](#Read-out-The-Internal-Temperature-of-an-Raspberry-Pi)
 
 
 ## Installation of Informix
@@ -730,10 +730,10 @@ WHERE sensor_id = "Sensor04"
 > 2 row(s) retrieved.
 
 
+## Read out The Internal Temperature of an Raspberry Pi
 
 
 
 
-
-Happy Coding! :joy:
+Congratulations! :clap:
 
